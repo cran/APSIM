@@ -1,6 +1,7 @@
 #' An S4 class used to store all information about a met file.
 #' 
 #' @export
+#' @slot const A character vector containing constants that wilkl be written to the file. Format is 'variable = value'.
 #' @slot lat A length one numeric vector.
 #' @slot lon A length one numeric vector.
 #' @slot tav A length one numeric vector.
@@ -8,7 +9,7 @@
 #' @slot units A character vector containing the names of the columns in \code{data}.
 #' @slot data A data frame containing per day weather data.
 metFile <- methods::setClass("metFile",
-                    slots = c(lat="numeric", lon="numeric", tav="numeric", amp="numeric", units="character", data="data.frame"))
+                    slots = c(const="character", lat="numeric", lon="numeric", tav="numeric", amp="numeric", units="character", data="data.frame"))
 
 #' Convert raw data to the correct APSIM met format.
 #' 
@@ -61,7 +62,11 @@ prepareMet <- function (data, lat=stop("Latitude required."), lon=stop("Longitud
         converted <- FALSE
         for (col.idx in seq_len(ncol(data))) {
             x <- data[, col.idx]
-            if (lubridate::is.Date(x)) break
+            if (lubridate::is.Date(x)){
+                 converted = TRUE
+                 break
+            }
+            
             if (!is.character(x) | is.factor(x)) next
             if (all(is.na(x))) next
             
@@ -194,7 +199,7 @@ checkMet <- function (met, lmint=-8, umint=32, lmaxt=10, umaxt=50){
 #'
 #'          To summarise -
 #'          If the year is divisible by 4 it is a leap year, unless it is
-#'      a centesimal year, in which case_z it must be divisible by 400.
+#'      a centesimal year, in which case it must be divisible by 400.
 #'      i.e.  it is a leap year if either of the conditions hold:
 #'             (1) the year is divisible by 4 but not by 100;
 #'             (2) the year is divisible by 400.
@@ -269,6 +274,7 @@ loadMet <- function(f)
     ampFound <- FALSE
     namesFound <- FALSE
     unitsFound <- FALSE
+    constants <- NULL
     met <- metFile()
     count <- 0
     data <- list(NULL)
@@ -296,6 +302,8 @@ loadMet <- function(f)
         } else if(grepl("amp", tolower(oneLine)) && !ampFound) {        # look for an amp
             met@amp <- as.numeric(stringr::str_extract(oneLine, "[-+]?[0-9]*\\.?[0-9]+"))
             ampFound <- TRUE
+        } else if(grepl("=", oneLine)) {     #add constants
+            constants[length(constants) + 1] <- oneLine
         } else { # we're up to the data now
             if (!namesFound) {
                 colNames <- unlist(strsplit(oneLine, " ", fixed=TRUE))
@@ -328,6 +336,7 @@ loadMet <- function(f)
             data[[i]] <- as.numeric(data[[i]])
     }
     met@data <- data
+    met@const <- constants
     return(met)
 }
 
@@ -352,6 +361,9 @@ writeMetFile <- function(fileName, met){
     
     con <- file(fileName, "w")
     writeLines("[weather.met.weather]", con)
+    for(i in 1:length(met@const)) {
+        writeLines(met@const[i], con)
+    }
     writeLines("", con)
     writeLines(paste("Latitude =", met@lat), con)
     writeLines("", con)
