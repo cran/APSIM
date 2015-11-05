@@ -13,10 +13,10 @@ metFile <- methods::setClass("metFile",
 
 #' Convert raw data to the correct APSIM met format.
 #' 
-#' \code{PrepareMet} accepts a data frame containing met data and prepares it 
+#' \code{prepareMet} accepts a data frame containing met data and prepares it 
 #' for writing to an APSIM formatted source file.
 #' 
-#' It will generate year/day columns from an existing date column, check to 
+#' It will generate year/day columns from an existing date column (and add the required units), check to 
 #' ensure that dates are continuous and checks for the existence of required 
 #' column names (year, day, radn, mint, maxt and rain).
 #' 
@@ -28,19 +28,24 @@ metFile <- methods::setClass("metFile",
 #'   \itemize{ \item Microsoft Excel files - readxl \item NetCDF - RNetCDF \item
 #'   MySQL database - RMySQL \item Generic databases (including Microsoft SQL 
 #'   Server) - RODBC }
+#'   
+#' @section Specifiying units for data: Each data column requires a unit in order to be valid. Units need to be enclosed in parentheses.
+#'   For unitless values, use "()". Units can be specified by passing a 'units' vector to \code{prepareMet} (see example) or they may already be 
+#'   included in the data as would be seen in an APSIM output file. In this case, use \code{\link{loadMet}} instead.
 #' @param data A data frame containing the data to prepare.
 #' @param lat Latitude in decimal degrees.
 #' @param lon Longitude in decimal degrees.
+#' @param units A character vector containing units for each column.
 #' @param newNames (optional) A vector of new column names.
 #' @param date.format (optional) A string containg the date format to use.
 #' @return A metFile S4 class containing the prepared met data.
 #' @export
 #' @examples
 #' data(Kingsthorpe)
-#' prepareMet(kingsData, -27.48, 151.81, newNames=
-#'   c("Date", "maxt", "mint", "rain", "evaporation",
-#'    "radn", "vp", "Windrun.km", "RH.at.9am", "SVP.at.9am"))
-prepareMet <- function (data, lat=stop("Latitude required."), lon=stop("Longitude required."), newNames=NULL, date.format="AU"){
+#' newNames <-c("Date", "maxt", "mint", "rain", "evaporation", "radn", "vp", "Wind", "RH", "SVP")
+#' units <- c("()", "(oC)", "(oC)", "(mm)", "(mm)", "(MJ/m^2/day)", "()", "()", "()", "()")
+#' prepareMet(kingsData, -27.48, 151.81, newNames = newNames, units = units)
+prepareMet <- function (data, lat=stop("Latitude required."), lon=stop("Longitude required."), units=stop("Vector for met units required. See function help if part of table."), newNames=NULL, date.format="AU"){
     #rename columns
     if (!is.null(newNames) & (length(newNames) == length(data))) {
         names(data) <- newNames
@@ -84,6 +89,7 @@ prepareMet <- function (data, lat=stop("Latitude required."), lon=stop("Longitud
             # found a date column; turn it into year and day
             data$year <- lubridate::year(data[, col.idx])
             data$day  <- lubridate::yday(data[, col.idx])
+            units <- c(units, "()", "()")
             colnames(data)[col.idx] <- "date"
         }
         else stop(paste("Could not find year/day or date columns or date column format does not match", date.format))
@@ -99,7 +105,9 @@ prepareMet <- function (data, lat=stop("Latitude required."), lon=stop("Longitud
     print(reqNames %in% names(data))
     if (!all(reqNames %in% names(data))) stop("One or more required column names are missing.")
     
-    met <- metFile(data=data, lat=lat, lon=lon)
+    if(ncol(data) != length(units)) stop("The number of columns in the data did not match the number of units. All data columns must have units. For unitless values use ().")
+    
+    met <- metFile(data=data, lat=lat, lon=lon, units= units)
     
     # add tav and amp
     met <- insertTavAmp(met)
@@ -121,6 +129,10 @@ prepareMet <- function (data, lat=stop("Latitude required."), lon=stop("Longitud
 #'   \item Evaporation that is too high or low.
 #'   \item Radiation that is too high or low.
 #'   }
+#'   
+#'   Note that issues found may not stop APSIM from running
+#'   but might indicate an issue with the weather data.
+#'   Warnings may not be applicable for very hot or cold climates.
 #' 
 #' Expects input in metFile object. Use prepareMet or loadMet first.
 #'   
@@ -147,9 +159,15 @@ checkMet <- function (met, lmint=-8, umint=32, lmaxt=10, umaxt=50){
     rcal <- sirad::extrat(met@data$day, sirad::radians(met@lat))
     
     # extract evaporation if it exists
-    ifelse("evap" %in% names(met@data), evapCol <- met@data[,c("evap", "year", "day")],
-           ifelse("evaporation" %in% names(met@data), evapCol <- met@data[,c("evaporation", "year","day")], evapCol <- NULL))
+    if("evap" %in% names(met@data)){
+        evapCol <- met@data[,c("evap", "year", "day")]
+    } else if("evaporation" %in% names(met@data)) {
+        evapCol <- met@data[,c("evaporation", "year","day")]
+        } else {
+            evapCol <- NULL
+        }
     
+    # do some more checks. Not the fastest given the loop, but this isn't run often.
     for(i in 1:nrow(met@data)) {
         # Check for maxt discontinuity.
         if(i > 3 && abs(met@data$maxtP1[i] - met@data$maxt[i] + met@data$maxtP1[i] - met@data$maxtP2[i]) > (ifelse(abs(met@lat) > 18, 19, 9)))
@@ -161,8 +179,9 @@ checkMet <- function (met, lmint=-8, umint=32, lmaxt=10, umaxt=50){
         
         # Evaporation (if available) must be between -0.5 and 20 mm
         # first check for an evaporation column
-        if(class(evapCol) != "NULL" & (evapCol[i,1] > 20 | evapCol[i,1] < -0.5))
-            warning(paste("Evaporation out of bounds on", evapCol$year[i], evapCol$day[i]))
+        if(class(evapCol) != "NULL")
+            if (evapCol[i,1] > 20 | evapCol[i,1] < -0.5)
+                warning(paste("Evaporation out of bounds on", evapCol$year[i], evapCol$day[i]))
         
         # maxt must be between 10 and 50 degrees Celcius
         if(met@data$maxt[i] < 10 | met@data$maxt[i] > 50)
@@ -207,7 +226,7 @@ checkMet <- function (met, lmint=-8, umint=32, lmaxt=10, umaxt=50){
 #' @export
 checkCont <- function(data){
     if((data$year[1] %% 4 == 0 && data$year[1] %% 100 == 0) || data$year[1] %% 400 == 0){
-        if(nrow(data == 365)){
+        if(nrow(data) == 365){
             # we're missing a leap day. Interpolate and add extra day
             dr <- data[59,]
             dr$day <- dr$day + 1
@@ -222,8 +241,8 @@ checkCont <- function(data){
         }        
     }   
     
-    ifelse(nrow(data) != data$day[nrow(data)] - data$day[1] + 1,
-           warning(paste("Number of days in", data$year[1], "does not match expected number,", data$day[nrow(data)] - data$day[1] + 1)), "")
+    if(nrow(data) != data$day[nrow(data)] - data$day[1] + 1)
+           warning(paste("Number of days in", data$year[1], "does not match expected number,", data$day[nrow(data)] - data$day[1] + 1))
 }
 
 #' Inserts Tav and Amp into a met object.
@@ -336,7 +355,7 @@ loadMet <- function(f)
             data[[i]] <- as.numeric(data[[i]])
     }
     met@data <- data
-    met@const <- constants
+    met@const <- ifelse(is.null(constants), "", constants)
     return(met)
 }
 

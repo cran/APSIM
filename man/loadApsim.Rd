@@ -4,14 +4,15 @@
 \alias{loadApsim}
 \title{Read APSIM .out files.}
 \usage{
-loadApsim(dir, loadAll = TRUE, ext = ".out", returnFrame = TRUE, n = 0,
-  fill = FALSE, addConstants = TRUE)
+loadApsim(dir = NULL, loadAll = TRUE, ext = ".out", returnFrame = TRUE,
+  n = 0, fill = FALSE, addConstants = TRUE)
 }
 \arguments{
-\item{dir}{The directory to search for .out files. This is not recursive.}
+\item{dir}{(optional) The directory to search for .out files. This is not recursive.
+If omitted, the current working directory will be used.}
 
 \item{loadAll}{If TRUE will load all files in \code{dir}. If FALSE, will load
-a single file specified by \code{dir}.}
+a single file specified by \code{dir}. Default is TRUE.}
 
 \item{ext}{The extension to use for output files. Default is \code{.out}.}
 
@@ -34,7 +35,8 @@ Reads APSIM .out files.
 \details{
 By default, this function will read in all output files in a directory and
 combine them into a single data table. Setting \code{loadAll=FALSE} will read
-a single file. Constants in outputs will be added as data columns and output
+a single file. If the path is omitted it will try to find the file in the current
+working directory. Constants in outputs will be added as data columns and output
 files with differing numbers of columns can also be imported although by
 default this will result in an error. Care should be taken when using this
 option as a different number of columns in output files usually means the
