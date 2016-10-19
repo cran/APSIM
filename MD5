@@ -1,10 +1,10 @@
-b5a7dfa67d937ecb2c6a330d6bbce541 *DESCRIPTION
+0bb12219318fab28082fed954102415c *DESCRIPTION
 b6e9d3117027683985cc87a3f167a2ab *NAMESPACE
 1ce4a9aeefff967bb9ffd3eece82e699 *R/LoadAPSIMouts.R
 8823842f8e3eccdfbcf90c65c7e65b4d *R/LoadNGouts.R
-393045bec1594fb3d19b7c3c6dfb46ac *R/MetFunctions.R
+d504a5b83723e8b8c50dde0b6b4b5091 *R/MetFunctions.R
 612a19e441133e363ac62b40d3edb6c4 *R/apsim.R
-3273ad7e3dee08d89911d4074118e267 *README.md
+297d176ca20efdff1ca3ee38e6e3c36e *README.md
 78988b4ff1203988fd4c01c2224fa45c *data/Kingsthorpe.rda
 72ddf7ab2f5dcec81d2265b7e9788682 *data/met.rda
 592c62b0cecf27464bb8ceaf0514c5bd *man/GetApsimNGTable.Rd
@@ -15,7 +15,7 @@ d100709228eb95953fd55f4fa625779b *man/apsim.Rd
 1ae406941e0f11e474ab4ed25e4539c7 *man/insertTavAmp.Rd
 e6c0785d39852e06a1ca451bfd67705f *man/kingsData.Rd
 77b738be7c79727354610d4940e2046f *man/loadApsim.Rd
-19060acd8c1e6536b48bebb394594272 *man/loadMet.Rd
+b07275d86ce4be7751298e8dc56a93b3 *man/loadMet.Rd
 fe63fa9e47760e947af8c5386d454016 *man/met.Rd
 e467f64057175efb3d0f2e147e46da79 *man/metFile-class.Rd
 64a979b0cd071237e8a0c68944f470b3 *man/prepareMet.Rd
