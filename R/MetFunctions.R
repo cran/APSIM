@@ -268,8 +268,8 @@ insertTavAmp <- function(met){
     data$meanDayT <- (data$maxt + data$mint) / 2
     mmt <- plyr::ddply(data, "month", function(df) mean(df$meanDayT))
     if (nrow(mmt) != 12) print("WARNING: At least 12 months of data is required to generate tav and amp. Values may be inaccurate.")
-    met@tav <- max(mmt$V1) - min(mmt$V1)
-    met@amp <- mean(mmt$V1)
+    met@amp <- max(mmt$V1) - min(mmt$V1)
+    met@tav <- mean(mmt$V1)
     return(met)
 }
 

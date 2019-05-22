@@ -3,6 +3,10 @@ A package containing general purpose utility functions for loading and manipulat
 Release Notes
 =============
 
+### 0.9.3
+
+-   TAV and AMP calculations have been incorrect (swapped)
+
 ### 0.9.2
 
 -   loadApsim has new option: skipEmpty, which will skip output files with no data.
